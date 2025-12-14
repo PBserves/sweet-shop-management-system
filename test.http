@@ -1,0 +1,42 @@
+### Get all sweets
+GET http://localhost:3000/api/sweets
+
+###
+
+### Add a new sweet
+POST http://localhost:3000/api/sweets
+Content-Type: application/json
+
+{
+  "name": "Barfi",
+  "price": 15,
+  "quantity": 40
+}
+
+### Purchase a sweet
+POST http://localhost:3000/api/sweets/3/purchase
+Content-Type: application/json
+
+{
+  "quantity": 5
+}
+###quantity more than available
+POST http://localhost:3000/api/sweets/1/purchase
+Content-Type: application/json
+
+{
+  "quantity": 1000
+}
+
+### testing Restock a sweet
+POST http://localhost:3000/api/sweets/1/restock
+Content-Type: application/json
+
+{
+  "quantity": 20
+}
+
+### Delete a sweet
+DELETE http://localhost:3000/api/sweets/2
+
+DELETE http://localhost:3000/api/sweets/999
