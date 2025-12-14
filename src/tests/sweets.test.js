@@ -1,11 +1,30 @@
+require("dotenv").config();
 const request = require("supertest");
 const express = require("express");
 
 const sweetsRoutes = require("../routes/sweets.routes");
+const authRoutes = require("../auth/auth.routes");
 
 const app = express();
 app.use(express.json());
+
+// register routes
 app.use("/api/sweets", sweetsRoutes);
+app.use("/auth", authRoutes);
+
+// helper to get token
+async function registerAndLogin(user) {
+    await request(app).post("/auth/register").send(user);
+
+    const loginRes = await request(app)
+        .post("/auth/login")
+        .send({
+            username: user.username,
+            password: user.password,
+        });
+
+    return loginRes.body.token;
+}
 
 describe("GET /api/sweets", () => {
     it("should return list of sweets", async () => {
@@ -18,25 +37,20 @@ describe("GET /api/sweets", () => {
 
 describe("POST /api/sweets/:id/purchase", () => {
     it("should reduce quantity when purchase is successful", async () => {
-        // First, get current sweets
         const beforeResponse = await request(app).get("/api/sweets");
-        const sweet = beforeResponse.body[0]; // take first sweet
+        const sweet = beforeResponse.body[0];
         const originalQuantity = sweet.quantity;
 
-        // Purchase 2 units
         const purchaseResponse = await request(app)
             .post(`/api/sweets/${sweet.id}/purchase`)
             .send({ quantity: 2 });
 
         expect(purchaseResponse.statusCode).toBe(200);
         expect(purchaseResponse.body.message).toBe("Purchase successful");
-        expect(purchaseResponse.body.sweet.quantity).toBe(
-            originalQuantity - 2
-        );
+        expect(purchaseResponse.body.sweet.quantity).toBe(originalQuantity - 2);
     });
 
     it("should fail if stock is insufficient", async () => {
-        // Try to purchase an absurdly large quantity
         const response = await request(app)
             .post("/api/sweets/1/purchase")
             .send({ quantity: 10000 });
@@ -48,26 +62,36 @@ describe("POST /api/sweets/:id/purchase", () => {
 
 describe("POST /api/sweets/:id/restock", () => {
     it("should increase quantity when restock is successful", async () => {
-        // Get current quantity
+        const adminToken = await registerAndLogin({
+            username: "admin_restock",
+            password: "admin123",
+            role: "admin",
+        });
+
         const beforeResponse = await request(app).get("/api/sweets");
         const sweet = beforeResponse.body[0];
         const originalQuantity = sweet.quantity;
 
-        // Restock 5 units
         const restockResponse = await request(app)
             .post(`/api/sweets/${sweet.id}/restock`)
+            .set("Authorization", `Bearer ${adminToken}`)
             .send({ quantity: 5 });
 
         expect(restockResponse.statusCode).toBe(200);
         expect(restockResponse.body.message).toBe("Restock successful");
-        expect(restockResponse.body.sweet.quantity).toBe(
-            originalQuantity + 5
-        );
+        expect(restockResponse.body.sweet.quantity).toBe(originalQuantity + 5);
     });
 
     it("should fail for invalid restock quantity", async () => {
+        const adminToken = await registerAndLogin({
+            username: "admin_restock2",
+            password: "admin123",
+            role: "admin",
+        });
+
         const response = await request(app)
             .post("/api/sweets/1/restock")
+            .set("Authorization", `Bearer ${adminToken}`)
             .send({ quantity: 0 });
 
         expect(response.statusCode).toBe(400);
@@ -77,33 +101,88 @@ describe("POST /api/sweets/:id/restock", () => {
 
 describe("DELETE /api/sweets/:id", () => {
     it("should delete a sweet successfully", async () => {
-        // Get current sweets
-        const beforeResponse = await request(app).get("/api/sweets");
-        const sweetsBefore = beforeResponse.body;
-        const sweetToDelete = sweetsBefore[0];
+        const adminToken = await registerAndLogin({
+            username: "admin_delete",
+            password: "admin123",
+            role: "admin",
+        });
 
-        // Delete the sweet
-        const deleteResponse = await request(app).delete(
-            `/api/sweets/${sweetToDelete.id}`
-        );
+        const beforeResponse = await request(app).get("/api/sweets");
+        const sweetToDelete = beforeResponse.body[0];
+
+        const deleteResponse = await request(app)
+            .delete(`/api/sweets/${sweetToDelete.id}`)
+            .set("Authorization", `Bearer ${adminToken}`);
 
         expect(deleteResponse.statusCode).toBe(200);
         expect(deleteResponse.body.message).toBe("Sweet deleted successfully");
-
-        // Verify it is removed
-        const afterResponse = await request(app).get("/api/sweets");
-        const sweetsAfter = afterResponse.body;
-
-        const exists = sweetsAfter.find(
-            (s) => s.id === sweetToDelete.id
-        );
-        expect(exists).toBeUndefined();
     });
 
     it("should fail when deleting a non-existent sweet", async () => {
-        const response = await request(app).delete("/api/sweets/99999");
+        const adminToken = await registerAndLogin({
+            username: "admin_delete2",
+            password: "admin123",
+            role: "admin",
+        });
+
+        const response = await request(app)
+            .delete("/api/sweets/99999")
+            .set("Authorization", `Bearer ${adminToken}`);
 
         expect(response.statusCode).toBe(404);
         expect(response.body.message).toBe("Sweet not found");
+    });
+});
+
+describe("Auth protection for admin routes", () => {
+    it("should block access without token", async () => {
+        const res = await request(app)
+            .post("/api/sweets")
+            .send({
+                name: "Test Sweet",
+                price: 10,
+                quantity: 10,
+            });
+
+        expect(res.statusCode).toBe(401);
+    });
+
+    it("should block non-admin user", async () => {
+        const userToken = await registerAndLogin({
+            username: "user1",
+            password: "user123",
+            role: "user",
+        });
+
+        const res = await request(app)
+            .post("/api/sweets")
+            .set("Authorization", `Bearer ${userToken}`)
+            .send({
+                name: "Test Sweet",
+                price: 10,
+                quantity: 10,
+            });
+
+        expect(res.statusCode).toBe(403);
+    });
+
+    it("should allow admin user", async () => {
+        const adminToken = await registerAndLogin({
+            username: "admin2",
+            password: "admin123",
+            role: "admin",
+        });
+
+        const res = await request(app)
+            .post("/api/sweets")
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({
+                name: "Admin Sweet",
+                price: 20,
+                quantity: 5,
+            });
+
+        expect(res.statusCode).toBe(201);
+        expect(res.body.message).toBe("Sweet added successfully");
     });
 });

@@ -5,7 +5,8 @@ const jwt = require("jsonwebtoken");
 const users = [];
 
 // SECRET (later move to .env)
-const JWT_SECRET = "supersecretkey";
+const JWT_SECRET = process.env.JWT_SECRET;
+
 
 // register user
 async function registerUser({ username, password, role }) {
