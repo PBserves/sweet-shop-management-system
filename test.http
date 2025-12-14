@@ -38,5 +38,47 @@ Content-Type: application/json
 
 ### Delete a sweet
 DELETE http://localhost:3000/api/sweets/2
-
+### Delete a sweet out of index
 DELETE http://localhost:3000/api/sweets/999
+
+### Register admin
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123",
+  "role": "admin"
+}
+
+###
+
+### Login admin
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+###ADMIN route WITHOUT token
+POST http://localhost:3000/api/sweets
+Content-Type: application/json
+
+{
+  "name": "Kaju Katli",
+  "price": 20,
+  "quantity": 30
+}
+
+### Add sweet as admin (protected)
+POST http://localhost:3000/api/sweets
+Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY1NzMxMzgxLCJleHAiOjE3NjU3MzQ5ODF9.s4s_Q2u1ZqHB0eEuqLy9ORsFxugnHc_RArd5JqovNXw"
+Content-Type: application/json
+
+{
+  "name": "Kaju Katli",
+  "price": 20,
+  "quantity": 30
+}
