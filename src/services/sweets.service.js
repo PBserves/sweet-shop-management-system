@@ -73,6 +73,52 @@ async function deleteSweet(id) {
 
     return sweet;
 }
+// search sweets
+async function searchSweets(query) {
+    const { name, category, minPrice, maxPrice } = query;
+
+    const where = {};
+
+    if (name) {
+        where.name = {
+            contains: name,
+        };
+    }
+
+    if (category) {
+        where.category = {
+            contains: category,
+        };
+    }
+
+    if (minPrice || maxPrice) {
+        where.price = {};
+        if (minPrice) where.price.gte = Number(minPrice);
+        if (maxPrice) where.price.lte = Number(maxPrice);
+    }
+
+    return prisma.sweet.findMany({ where });
+}
+
+
+
+
+// update sweet
+async function updateSweet(id, data) {
+    const sweet = await prisma.sweet.findUnique({
+        where: { id },
+    });
+
+    if (!sweet) {
+        throw new AppError("Sweet not found", 404);
+    }
+
+    return prisma.sweet.update({
+        where: { id },
+        data,
+    });
+}
+
 
 module.exports = {
     getAllSweets,
@@ -80,4 +126,6 @@ module.exports = {
     purchaseSweet,
     restockSweet,
     deleteSweet,
+    searchSweets,
+    updateSweet,
 };

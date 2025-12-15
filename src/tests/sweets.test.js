@@ -219,3 +219,73 @@ describe("Auth protection for admin routes", () => {
         expect(res.body.message).toBe("Sweet added successfully");
     });
 });
+describe("GET /api/sweets/search", () => {
+    it("should search sweets by category", async () => {
+        const res = await request(app)
+            .get("/api/sweets/search")
+            .query({ category: "Indian" });
+
+        expect(res.statusCode).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+        expect(res.body.length).toBeGreaterThan(0);
+    });
+
+    it("should search sweets by name", async () => {
+        const res = await request(app)
+            .get("/api/sweets/search")
+            .query({ name: "gulab" });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body[0].name).toMatch(/gulab/i);
+    });
+
+    it("should search sweets by price range", async () => {
+        const res = await request(app)
+            .get("/api/sweets/search")
+            .query({ minPrice: 9, maxPrice: 11 });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.length).toBeGreaterThan(0);
+    });
+});
+describe("PUT /api/sweets/:id", () => {
+    it("should update a sweet (admin only)", async () => {
+        const adminToken = await registerAndLogin({
+            username: "admin_update",
+            password: "admin123",
+            role: "admin",
+        });
+
+        const sweetsRes = await request(app).get("/api/sweets");
+        const sweet = sweetsRes.body[0];
+
+        const res = await request(app)
+            .put(`/api/sweets/${sweet.id}`)
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({
+                price: 99,
+                quantity: 20,
+            });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.message).toBe("Sweet updated successfully");
+        expect(res.body.sweet.price).toBe(99);
+        expect(res.body.sweet.quantity).toBe(20);
+    });
+
+    it("should fail when updating non-existent sweet", async () => {
+        const adminToken = await registerAndLogin({
+            username: "admin_update2",
+            password: "admin123",
+            role: "admin",
+        });
+
+        const res = await request(app)
+            .put("/api/sweets/99999")
+            .set("Authorization", `Bearer ${adminToken}`)
+            .send({ price: 50 });
+
+        expect(res.statusCode).toBe(404);
+        expect(res.body.message).toBe("Sweet not found");
+    });
+});

@@ -11,6 +11,8 @@ const {
     purchaseSweet,
     restockSweet,
     deleteSweet,
+    searchSweets,
+    updateSweet,
 } = require("../services/sweets.service");
 
 /**
@@ -49,7 +51,41 @@ router.get(
         res.json(sweets);
     })
 );
-
+/**
+ * @swagger
+ * /api/sweets/search:
+ *   get:
+ *     summary: Search sweets
+ *     description: Search sweets by name, category or price range
+ *     parameters:
+ *       - in: query
+ *         name: name
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Matching sweets
+ */
+router.get("/search", async (req, res, next) => {
+    try {
+        const sweets = await searchSweets(req.query);
+        res.json(sweets);
+    } catch (err) {
+        next(err);
+    }
+});
 /**
  * @swagger
  * /api/sweets:
@@ -248,6 +284,57 @@ router.delete(
         });
     })
 );
+
+
+
+/**
+ * @swagger
+ * /api/sweets/{id}:
+ *   put:
+ *     summary: Update a sweet (Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               price:
+ *                 type: integer
+ *               quantity:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Sweet updated successfully
+ *       404:
+ *         description: Sweet not found
+ */
+router.put("/:id", requireAuth, requireAdmin, async (req, res, next) => {
+    try {
+        const sweet = await updateSweet(
+            parseInt(req.params.id),
+            req.body
+        );
+        res.json({
+            message: "Sweet updated successfully",
+            sweet,
+        });
+    } catch (err) {
+        next(err);
+    }
+});
 
 
 
