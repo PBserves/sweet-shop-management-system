@@ -1,3 +1,4 @@
+const globalErrorHandler = require("../middleware/error.middleware");
 require("dotenv").config();
 const request = require("supertest");
 const express = require("express");
@@ -12,6 +13,7 @@ app.use(express.json());
 // register routes
 app.use("/api/sweets", sweetsRoutes);
 app.use("/auth", authRoutes);
+app.use(globalErrorHandler);
 
 // helper to register + login
 async function registerAndLogin(user) {

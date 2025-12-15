@@ -4,7 +4,7 @@ const {
     requireAuth,
     requireAdmin,
 } = require("../middleware/auth.middleware");
-
+const asyncHandler = require("../utils/asyncHandler");
 const {
     getAllSweets,
     addSweet,
@@ -42,10 +42,13 @@ const {
  */
 
 // GET /api/sweets
-router.get("/", async (req, res) => {
-    const sweets = await getAllSweets();
-    res.json(sweets);
-});
+router.get(
+    "/",
+    asyncHandler(async (req, res) => {
+        const sweets = await getAllSweets();
+        res.json(sweets);
+    })
+);
 
 /**
  * @swagger
@@ -84,17 +87,18 @@ router.get("/", async (req, res) => {
  */
 
 // POST /api/sweets
-router.post("/", requireAuth, requireAdmin, async (req, res) => {
-    try {
+router.post(
+    "/",
+    requireAuth,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
         const sweet = await addSweet(req.body);
         res.status(201).json({
             message: "Sweet added successfully",
             sweet,
         });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
+    })
+);
 
 /**
  * @swagger
@@ -127,20 +131,20 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
 
 
 // POST /api/sweets/:id/purchase
-router.post("/:id/purchase", async (req, res) => {
-    try {
+router.post(
+    "/:id/purchase",
+    asyncHandler(async (req, res) => {
         const sweet = await purchaseSweet(
             parseInt(req.params.id),
             req.body.quantity
         );
+
         res.json({
             message: "Purchase successful",
             sweet,
         });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
+    })
+);
 
 /**
  * @swagger
@@ -184,20 +188,22 @@ router.post("/:id/purchase", async (req, res) => {
 
 
 // POST /api/sweets/:id/restock
-router.post("/:id/restock", requireAuth, requireAdmin, async (req, res) => {
-    try {
+router.post(
+    "/:id/restock",
+    requireAuth,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
         const sweet = await restockSweet(
             parseInt(req.params.id),
             req.body.quantity
         );
+
         res.json({
             message: "Restock successful",
             sweet,
         });
-    } catch (error) {
-        res.status(400).json({ message: error.message });
-    }
-});
+    })
+);
 
 /**
  * @swagger
@@ -229,17 +235,19 @@ router.post("/:id/restock", requireAuth, requireAdmin, async (req, res) => {
 
 
 // DELETE /api/sweets/:id (admin only)
-router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
-    try {
+router.delete(
+    "/:id",
+    requireAuth,
+    requireAdmin,
+    asyncHandler(async (req, res) => {
         const deletedSweet = await deleteSweet(parseInt(req.params.id));
+
         res.json({
             message: "Sweet deleted successfully",
             sweet: deletedSweet,
         });
-    } catch (error) {
-        res.status(404).json({ message: error.message });
-    }
-});
+    })
+);
 
 
 

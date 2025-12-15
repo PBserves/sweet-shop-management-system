@@ -3,6 +3,7 @@ const swaggerSpec = require("./swagger");
 require("dotenv").config();
 const express = require("express");
 const authRoutes = require("./auth/auth.routes");
+const globalErrorHandler = require("./middleware/error.middleware");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +25,7 @@ app.use("/api/sweets", sweetsRoutes);
 app.use("/auth", authRoutes);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use(globalErrorHandler);
 
 // start server
 app.listen(PORT, () => {
