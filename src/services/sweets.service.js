@@ -1,82 +1,94 @@
-// In-memory sweets data
-const sweets = [
-    { id: 1, name: "Gulab Jamun", price: 10, quantity: 50 },
-    { id: 2, name: "Rasgulla", price: 12, quantity: 30 },
-    { id: 3, name: "Ladoo", price: 8, quantity: 100 },
-];
+const prisma = require("../prisma");
 
 // get all sweets
-function getAllSweets() {
-    return sweets;
+async function getAllSweets() {
+    return prisma.sweet.findMany();
 }
 
 // add a new sweet
-function addSweet({ name, price, quantity }) {
-    if (!name || !price || !quantity) {
-        throw new Error("name, price and quantity are required");
+async function addSweet(data) {
+    const { name, category, price, quantity } = data;
+
+    if (!name || !category || price <= 0 || quantity < 0) {
+        throw new Error("Invalid sweet data");
     }
 
-    const newSweet = {
-        id: sweets.length + 1,
-        name,
-        price,
-        quantity,
-    };
-
-    sweets.push(newSweet);
-    return newSweet;
+    return prisma.sweet.create({
+        data: {
+            name,
+            category,
+            price,
+            quantity,
+        },
+    });
 }
 
 // purchase sweet
-function purchaseSweet(id, quantity) {
-    const sweet = sweets.find((s) => s.id === id);
+async function purchaseSweet(id, quantity) {
+    if (quantity <= 0) {
+        throw new Error("Invalid purchase quantity");
+    }
+
+    const sweet = await prisma.sweet.findUnique({
+        where: { id },
+    });
 
     if (!sweet) {
         throw new Error("Sweet not found");
-    }
-
-    if (quantity <= 0) {
-        throw new Error("Invalid purchase quantity");
     }
 
     if (sweet.quantity < quantity) {
         throw new Error("Insufficient stock");
     }
 
-    sweet.quantity -= quantity;
-    return sweet;
+    return prisma.sweet.update({
+        where: { id },
+        data: {
+            quantity: sweet.quantity - quantity,
+        },
+    });
 }
 
 // restock sweet
-function restockSweet(id, quantity) {
-    const sweet = sweets.find((s) => s.id === id);
+async function restockSweet(id, quantity) {
+    if (quantity <= 0) {
+        throw new Error("Invalid restock quantity");
+    }
+
+    const sweet = await prisma.sweet.findUnique({
+        where: { id },
+    });
 
     if (!sweet) {
         throw new Error("Sweet not found");
     }
 
-    if (quantity <= 0) {
-        throw new Error("Invalid restock quantity");
-    }
-
-    sweet.quantity += quantity;
-    return sweet;
+    return prisma.sweet.update({
+        where: { id },
+        data: {
+            quantity: {
+                increment: quantity,
+            },
+        },
+    });
 }
 
 // delete sweet
-function deleteSweet(id) {
-    const index = sweets.findIndex((s) => s.id === id);
+async function deleteSweet(id) {
+    const sweet = await prisma.sweet.findUnique({
+        where: { id },
+    });
 
-    if (index === -1) {
+    if (!sweet) {
         throw new Error("Sweet not found");
     }
 
-    const deletedSweet = sweets[index];
-    sweets.splice(index, 1);
+    await prisma.sweet.delete({
+        where: { id },
+    });
 
-    return deletedSweet;
+    return sweet;
 }
-
 
 module.exports = {
     getAllSweets,

@@ -1,3 +1,5 @@
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./swagger");
 require("dotenv").config();
 const express = require("express");
 const authRoutes = require("./auth/auth.routes");
@@ -20,6 +22,8 @@ const sweetsRoutes = require("./routes/sweets.routes");
 app.use("/api/sweets", sweetsRoutes);
 
 app.use("/auth", authRoutes);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // start server
 app.listen(PORT, () => {

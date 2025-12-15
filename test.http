@@ -74,7 +74,7 @@ Content-Type: application/json
 
 ### Add sweet as admin (protected)
 POST http://localhost:3000/api/sweets
-Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY1NzMxMzgxLCJleHAiOjE3NjU3MzQ5ODF9.s4s_Q2u1ZqHB0eEuqLy9ORsFxugnHc_RArd5JqovNXw"
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY1NzMxMzgxLCJleHAiOjE3NjU3MzQ5ODF9.s4s_Q2u1ZqHB0eEuqLy9ORsFxugnHc_RArd5JqovNXw
 Content-Type: application/json
 
 {

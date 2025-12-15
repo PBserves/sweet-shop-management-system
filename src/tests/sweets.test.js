@@ -2,6 +2,7 @@ require("dotenv").config();
 const request = require("supertest");
 const express = require("express");
 
+const prisma = require("../prisma");
 const sweetsRoutes = require("../routes/sweets.routes");
 const authRoutes = require("../auth/auth.routes");
 
@@ -12,7 +13,7 @@ app.use(express.json());
 app.use("/api/sweets", sweetsRoutes);
 app.use("/auth", authRoutes);
 
-// helper to get token
+// helper to register + login
 async function registerAndLogin(user) {
     await request(app).post("/auth/register").send(user);
 
@@ -26,12 +27,31 @@ async function registerAndLogin(user) {
     return loginRes.body.token;
 }
 
+/**
+ * IMPORTANT:
+ * Reset DB before EACH test
+ * This guarantees clean, predictable tests
+ */
+beforeEach(async () => {
+    await prisma.sweet.deleteMany();
+    await prisma.user.deleteMany();
+
+    await prisma.sweet.createMany({
+        data: [
+            { name: "Gulab Jamun", category: "Indian", price: 10, quantity: 50 },
+            { name: "Rasgulla", category: "Indian", price: 12, quantity: 30 },
+            { name: "Ladoo", category: "Indian", price: 8, quantity: 100 },
+        ],
+    });
+});
+
 describe("GET /api/sweets", () => {
     it("should return list of sweets", async () => {
         const response = await request(app).get("/api/sweets");
 
         expect(response.statusCode).toBe(200);
         expect(Array.isArray(response.body)).toBe(true);
+        expect(response.body.length).toBeGreaterThan(0);
     });
 });
 
@@ -39,7 +59,6 @@ describe("POST /api/sweets/:id/purchase", () => {
     it("should reduce quantity when purchase is successful", async () => {
         const beforeResponse = await request(app).get("/api/sweets");
         const sweet = beforeResponse.body[0];
-        const originalQuantity = sweet.quantity;
 
         const purchaseResponse = await request(app)
             .post(`/api/sweets/${sweet.id}/purchase`)
@@ -47,12 +66,17 @@ describe("POST /api/sweets/:id/purchase", () => {
 
         expect(purchaseResponse.statusCode).toBe(200);
         expect(purchaseResponse.body.message).toBe("Purchase successful");
-        expect(purchaseResponse.body.sweet.quantity).toBe(originalQuantity - 2);
+        expect(purchaseResponse.body.sweet.quantity).toBe(
+            sweet.quantity - 2
+        );
     });
 
     it("should fail if stock is insufficient", async () => {
+        const beforeResponse = await request(app).get("/api/sweets");
+        const sweet = beforeResponse.body[0];
+
         const response = await request(app)
-            .post("/api/sweets/1/purchase")
+            .post(`/api/sweets/${sweet.id}/purchase`)
             .send({ quantity: 10000 });
 
         expect(response.statusCode).toBe(400);
@@ -70,7 +94,6 @@ describe("POST /api/sweets/:id/restock", () => {
 
         const beforeResponse = await request(app).get("/api/sweets");
         const sweet = beforeResponse.body[0];
-        const originalQuantity = sweet.quantity;
 
         const restockResponse = await request(app)
             .post(`/api/sweets/${sweet.id}/restock`)
@@ -79,7 +102,9 @@ describe("POST /api/sweets/:id/restock", () => {
 
         expect(restockResponse.statusCode).toBe(200);
         expect(restockResponse.body.message).toBe("Restock successful");
-        expect(restockResponse.body.sweet.quantity).toBe(originalQuantity + 5);
+        expect(restockResponse.body.sweet.quantity).toBe(
+            sweet.quantity + 5
+        );
     });
 
     it("should fail for invalid restock quantity", async () => {
@@ -89,8 +114,11 @@ describe("POST /api/sweets/:id/restock", () => {
             role: "admin",
         });
 
+        const beforeResponse = await request(app).get("/api/sweets");
+        const sweet = beforeResponse.body[0];
+
         const response = await request(app)
-            .post("/api/sweets/1/restock")
+            .post(`/api/sweets/${sweet.id}/restock`)
             .set("Authorization", `Bearer ${adminToken}`)
             .send({ quantity: 0 });
 
@@ -108,10 +136,10 @@ describe("DELETE /api/sweets/:id", () => {
         });
 
         const beforeResponse = await request(app).get("/api/sweets");
-        const sweetToDelete = beforeResponse.body[0];
+        const sweet = beforeResponse.body[0];
 
         const deleteResponse = await request(app)
-            .delete(`/api/sweets/${sweetToDelete.id}`)
+            .delete(`/api/sweets/${sweet.id}`)
             .set("Authorization", `Bearer ${adminToken}`);
 
         expect(deleteResponse.statusCode).toBe(200);
@@ -140,6 +168,7 @@ describe("Auth protection for admin routes", () => {
             .post("/api/sweets")
             .send({
                 name: "Test Sweet",
+                category: "Indian",
                 price: 10,
                 quantity: 10,
             });
@@ -159,6 +188,7 @@ describe("Auth protection for admin routes", () => {
             .set("Authorization", `Bearer ${userToken}`)
             .send({
                 name: "Test Sweet",
+                category: "Indian",
                 price: 10,
                 quantity: 10,
             });
@@ -178,6 +208,7 @@ describe("Auth protection for admin routes", () => {
             .set("Authorization", `Bearer ${adminToken}`)
             .send({
                 name: "Admin Sweet",
+                category: "Indian",
                 price: 20,
                 quantity: 5,
             });
